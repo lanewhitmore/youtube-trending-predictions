@@ -93,12 +93,6 @@ VIEW_COUNT_COLUMN = "view_count"
 
 
 
-def df_obj_to_string(data_frame):
-    # converting the object types in the dataframe to strings to avoid issues with the distilbert package
-    for label in data_frame.columns:
-        if data_frame.dtypes[label] == "object":
-            data_frame[label] = data_frame[label].astype("str").astype("string")
-    return data_frame
 
 def feature_group_complete_and_log(feature_group):
     # establishing logging information for the creation of the feature group
@@ -148,7 +142,7 @@ def create_or_load_feature_group(prefix, feature_group_name):
         feature_group_complete_and_log(feature_group)
     except Exception as e:
         print("Before CREATE FG wait exeption: {}".format(e))
-    #        pass
+
 
     try:
         record_identifier_feature_name = "video_id"
@@ -471,14 +465,11 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name)
     df_test_records.head()
 
     
-    df_fs_train_records = df_obj_to_string(df_train_records)
-    df_fs_validation_records = df_obj_to_string(df_validation_records)
-    df_fs_test_records = df_obj_to_string(df_test_records)
 # Add record to feature store
     print("Ingesting Features...")
-    feature_group.ingest(data_frame=df_fs_train_records, max_workers=3, wait=True)
-    feature_group.ingest(data_frame=df_fs_validation_records, max_workers=3, wait=True)
-    feature_group.ingest(data_frame=df_fs_test_records, max_workers=3, wait=True)
+    feature_group.ingest(data_frame=df_train_records, max_workers=3, wait=True)
+    feature_group.ingest(data_frame=df_validation_records, max_workers=3, wait=True)
+    feature_group.ingest(data_frame=df_test_records, max_workers=3, wait=True)
     
     offline_store_status = None
     while offline_store_status != 'Active':
