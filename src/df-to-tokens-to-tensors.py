@@ -180,9 +180,10 @@ class InputFeatures(object):
         self.desc_input_ids = desc_input_ids
         self.desc_input_mask = desc_input_mask
         self.segment_ids = segment_ids
+        self.view_count = view_count
         self.video_id = video_id
         self.date = date
-        self.view_count = view_count
+        
 
 
 
@@ -194,8 +195,8 @@ class Input(object):
         self.description = str(description)
         self.video_id = str(video_id)
         self.date = date
-        self.view_count = view_count
-
+        self.view_count = int(view_count)
+        
 
 def convert_input(the_input, max_seq_length):
     title_tokens = tokenizer.tokenize(the_input.title)
@@ -252,8 +253,9 @@ def transform_inputs_to_tfrecord(inputs, output_file, max_seq_length):
             print("Writing input {} of {}\n".format(input_idx, len(inputs)))
 
         features = convert_input(the_input, max_seq_length)
-
         all_features = collections.OrderedDict()
+       
+        
         all_features["title_input_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.title_input_ids))
         all_features["title_input_mask"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.title_input_mask))
         all_features["tags_input_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.tags_input_ids))
@@ -261,6 +263,7 @@ def transform_inputs_to_tfrecord(inputs, output_file, max_seq_length):
         all_features["desc_input_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.desc_input_ids))
         all_features["desc_input_mask"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.desc_input_mask))
         all_features["segment_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.segment_ids))
+        all_features["view_count"] = tf.train.Feature(int64_list=tf.train.Int64List(value=[features.view_count]))
 
         tf_record = tf.train.Example(features=tf.train.Features(feature=all_features))
         tf_record_writer.write(tf_record.SerializeToString())

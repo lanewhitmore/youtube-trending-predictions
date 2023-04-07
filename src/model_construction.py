@@ -27,9 +27,11 @@ from tensorflow.keras.models import load_model
 import pandas as pd
 import numpy as np
 
+
 from transformers import DistilBertTokenizer
 from transformers import DistilBertConfig
 from transformers import DistilBertModel
+from transformers import TFDistilBertForSequenceClassification
 
 from sagemaker_tensorflow import PipeModeDataset
 
@@ -67,13 +69,13 @@ def file_dataset_builder(channel, input_filenames, pipe_mode, is_training, drop_
         "view_count": tf.io.FixedLenFeature([], tf.int64),
     }
     
-    def decode_record_to_tensorflow_ex(record, name_to_features):
-        record = tf.io.parse_single_example(record, name_tofeatures)
+    def decode_record_to_tensorflow_ex(record, name_features):
+        record = tf.io.parse_single_example(record, name_features)
         return record
     
     dataset = dataset.apply(
         tf.data.experimental.map_and_batch(
-            lambda record: decode_record_to_tensorflow_ex(record, name_to_features),
+            lambda record: decode_record_to_tensorflow_ex(record, name_features),
             batch_size=batch_size,
             drop_remainder=drop_remainder,
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -96,7 +98,7 @@ def loading_checkpoint(checkpoint_path):
     glob_pattern = os.path.join(checkpoint_path, "*.h5")
     print("glob pattern {}".format(glob_pattern))
     
-    list_of_checkpoints = glob.glob(glob_pattern)
+    list_of_checkpoints =gl(glob_pattern)
     print("List of checkpoint files: {}".format(list_of_checkpoints))
     
     last_check = max(list_of_checkpoints)
@@ -105,7 +107,7 @@ def loading_checkpoint(checkpoint_path):
     initial_epoch_num = last_check.rsplit("_", 1)[-1].split(".h5")[0]
     initial_epoch = int(initial_epoch_num)
     
-    loaded_model = TFDistilBertModel.from_pretrained(last_check, config = config)
+    loaded_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config, num_labels = 1)
     
     print("loaded_model: {}".format(loaded_model))
     print("starting epoch from checkpoint: {}".format(initial_epoch))
@@ -259,6 +261,9 @@ if __name__ == "__main__":
     tf_saved_model_path = os.path.join(model_directory, "tensorflow/saved_model/mod")
     os.makedirs(tf_saved_model_path, exist_ok = True)
     
+    tensorboard_logs_path = os.path.join(model_directory, "tensorboard/")
+    os.makedirs(tensorboard_logs_path, exist_ok=True)
+    
     
     distribute_strategy = tf.distribute.MirroredStrategy()
     
@@ -279,7 +284,7 @@ if __name__ == "__main__":
             steps_per_epoch = train_steps_per_epoch,
             max_seq_length = max_seq_length).map(select_data_and_view_count)
         
-        tokizer = None
+        tokenizer = None
         config = None 
         model = None
         transformer_model = None
@@ -290,30 +295,41 @@ if __name__ == "__main__":
             try:
                 tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
                 
-                transformer_model = DistilBertModel.from_pretrained("distilbert-base-uncased", config=config)
+                transformer_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config, num_labels = 1)
                 
                 title_ids = tf.keras.layers.Input(shape=(max_seq_length,), name="title_input_ids", dtype = "int32")
                 title_mask = tf.keras.layers.Input(shape=(max_seq_length,),name = "title_input_mask", dtype = "int32")
-                tags_ids = tf.keras.layers.Input(shape=(max_seq_length,), name="tags_input_ids", dtype = "int32")
-                tags_mask = tf.keras.layers.Input(shape=(max_seq_length,),name = "tags_input_mask", dtype = "int32")
-                desc_ids = tf.keras.layers.Input(shape=(max_seq_length,), name="desc_input_ids", dtype = "int32")
-                desc_mask = tf.keras.layers.Input(shape=(max_seq_length,),name = "desc_input_mask", dtype = "int32")
+             #   tags_ids = tf.keras.layers.Input(shape=(max_seq_length,), name="tags_input_ids", dtype = "int32")
+                #tags_mask = tf.keras.layers.Input(shape=(max_seq_length,),name = "tags_input_mask", dtype = "int32")
+               # desc_ids = tf.keras.layers.Input(shape=(max_seq_length,), name="desc_input_ids", dtype = "int32")
+               # desc_mask = tf.keras.layers.Input(shape=(max_seq_length,),name = "desc_input_mask", dtype = "int32")
                 
                 title_embedding_layer = transformer_model.distilbert(title_ids, attention_mask = title_mask)[0]
-                tags_embedding_layer = transformer_model.distilbert(tags_ids, attention_mask = tags_mask)[0]
-                desc_embedding_layer = transformer_model.distilbert(desc_ids, attention_mask = desc_mask)[0]
+                #tags_embedding_layer = transformer_model.distilbert(tags_ids, attention_mask = tags_mask)[0]
+                #desc_embedding_layer = transformer_model.distilbert(desc_ids, attention_mask = desc_mask)[0]
                 
-                X = tf.keras.models.Sequential(
-                            tf.keras.layers.Bidirectional(
-                                tf.keras.layers.LSTM(64, return_sequences = True, dropout = 0.1, recurrent_dropout = 0.1)
-                            )
-                        )(title_embedding_layer)
-                X = tf.keras.layersBidirectional(tf.keras.layers.LSTM(32, dropout=0.5))
-                X = tf.keras.layers.Dense(16, activation="relu")(X)
-                X = tf.keras.layers.Dropout(0.5)(X)
-                X = tf.keras.layers.Dense(1)(X)
+                ## model to build after getting initial model to work
+               # X = tf.keras.models.Sequential(
+                           # tf.keras.layers.Bidirectional(
+                               # tf.keras.layers.LSTM(64, return_sequences = True, dropout = 0.1, recurrent_dropout = 0.1)
+                            #)
+                        #)(title_embedding_layer)
+               # X = tf.keras.layersBidirectional(tf.keras.layers.LSTM(32, dropout=0.5))
+              #  X = tf.keras.layers.Dense(16, activation="relu")(X)
+               # X = tf.keras.layers.Dropout(0.5)(X)
+               # X = tf.keras.layers.Dense(1)(X)
                 
-                model = tf.keras.Model(inputs=[title_input_ids, title_input_mask], outputs=X)
+                # trying to get this initial model to run then a more complex one will be implemented here
+                X = tf.keras.layers.Bidirectional(
+                    tf.keras.layers.LSTM(50, return_sequences=True, dropout=0.1, recurrent_dropout=0.1)
+                )(embedding_layer)
+                X = tf.keras.layers.GlobalMaxPool1D()(X)
+                X = tf.keras.layers.Dense(50, activation="relu")(X)
+                X = tf.keras.layers.Dropout(0.2)(X)
+                X = tf.keras.layers.Dense(1, activation='linear')(X)
+                
+                model = tf.keras.Model(inputs=[title_ids, title_mask], outputs=X)
+                
                 for layer in model.layers[:3]:
                     layer.trainable = not freeze_bert_layer
 
@@ -327,7 +343,7 @@ if __name__ == "__main__":
 
         callbacks = []
         
-        initial_epoch_number = 0
+        initial_epoch = 0
         
         if enable_checkpointing:
             print("------ Checkpoint Enabled -------")
@@ -336,7 +352,7 @@ if __name__ == "__main__":
             if os.listdir(checkpoint_path):
                 print("------ Found Checkpoint -------")
                 print(checkpoint_path)
-                model, initial_epoch_number = loading_checkpoint(checkpoint_path)
+                model, initial_epoch = loading_checkpoint(checkpoint_path)
                 print("----- Using checkpoint model {} -----".format(model))
                 
                 
@@ -346,7 +362,7 @@ if __name__ == "__main__":
                                                                                    monitor = "val_loss")
             print("---- Checkpoint Callback {} ----".format(checkpoint_callback))
             
-        if not tokinzer or not model or not config:
+        if not tokenizer or not model or not config:
             print("Not properly initialized....")
             
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon)
@@ -378,7 +394,7 @@ if __name__ == "__main__":
         
         loss = tf.keras.losses.MeanSquaredError()
         
-        model.compile(optimizer = optimizer, loss = loss, metrics = [tf.keras.metrics.RootMeanSquaredError(), tf.keras.metrics.Accuracy()])
+        model.compile(optimizer = optimizer, loss = loss, metrics = [tf.keras.metrics.RootMeanSquaredError()])
         print("Compiled Model {}".format(model))
         
         print(model.summary())
@@ -468,7 +484,21 @@ if __name__ == "__main__":
             #input_mask = encode_tokens["attention_mask"]
             
             
-            
+       # metrics_path = os.path.join(local_model_dir, "metrics/")
+       # os.makedirs(metrics_path, exist_ok=True)
+      # plt.savefig("{}/confusion_matrix.png".format(metrics_path))
+
+       # report_dict = {
+         #   "metrics": {
+                #"rmse": {
+                   # "value": rmse,
+           #     },
+        #    },
+      #  }
+
+       # evaluation_path = "{}/evaluation.json".format(metrics_path)
+       # with open(evaluation_path, "w") as f:
+         #   f.write(json.dumps(report_dict))
         
         
         
