@@ -48,7 +48,12 @@ The data comes in the form of a CSV and a JSON file for each region that has bee
 The bucket will be pathed here to access the YouTube statistics data set: s3://ads508youtubebucket/youtubeStatistics/.
 
 ## References
+
+Five Cognitive Biases In Data Science (And how to avoid them). (n.d.). KDnuggets. 			
+https://www.kdnuggets.com/2020/06/five-cognitive-biases-data-science.html
+
 Sharma, R. (2023). YouTube Trending Video Dataset (updated daily). Kaggle. Retrieved from: 
 https://www.kaggle.com/datasets/rsrishav/youtube-trending-video-dataset?select=US_category_id.json
 
-
+‌The Risks of AutoML and How to Avoid Them. (2019, October 24). Harvard Business Review. 		
+https://hbr.org/2019/10/the-risks-of-automl-and-how-to-avoid-them
