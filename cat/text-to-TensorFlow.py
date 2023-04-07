@@ -194,7 +194,7 @@ class InputFeatures(object):
 
 class Input(object):
     # input establishes the features to be converted
-    def __init__(self, title, tags, description, video_id, date, cat_view_count, cat_view_count):
+    def __init__(self, title, tags, description, video_id, date, cat_view_count):
         self.title = str(title)
         self.tags = str(tags)
         self.description = str(description)
@@ -229,7 +229,7 @@ def convert_input(the_input, max_seq_length):
     desc_input_ids = encoded_desc['input_ids']
     desc_input_mask = encoded_desc['attention_mask']
 
-    segment_ids = [0] * max_seq_length
+    segment_id = [0] * max_seq_length
     
     cat_view_count_id = label_map[the_input.cat_view_count]
 
@@ -240,11 +240,11 @@ def convert_input(the_input, max_seq_length):
         tags_input_mask=tags_input_mask,
         desc_input_ids=desc_input_ids,
         desc_input_mask=desc_input_mask,
-        cat_view_count_id = cat_view_count_id
-        segment_ids=segment_ids,
+        segment_ids=segment_id,
+        cat_view_count_id=cat_view_count_id,
         video_id=the_input.video_id,
         date=the_input.date,
-       cat_view_count=the_input.cat_view_count,
+        cat_view_count=the_input.cat_view_count,
     )
 
     return features
@@ -271,7 +271,7 @@ def transform_inputs_to_tfrecord(inputs, output_file, max_seq_length):
         all_features["desc_input_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.desc_input_ids))
         all_features["desc_input_mask"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.desc_input_mask))
         all_features["segment_ids"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.segment_ids))
-        all_features["cat_view_count_id"] = tf.train.Feature(int64_list=tf.train.Int64List(value=features.cat_view_count_id))
+        all_features["cat_view_count_id"] = tf.train.Feature(int64_list=tf.train.Int64List(value=[features.cat_view_count_id]))
 
         tf_record = tf.train.Example(features=tf.train.Features(feature=all_features))
         tf_record_writer.write(tf_record.SerializeToString())
@@ -360,6 +360,7 @@ def parse_args():
         type=str,
         default=None,
     )
+    parser.add_argument("--balance-dataset", type=eval, default=True)
     parser.add_argument(
         "--feature-group-name",
         type=str,
@@ -369,7 +370,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name):
+def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name, balance_dataset):
     print("file {}".format(file))
     print("max_seq_length {}".format(max_seq_length))
     print("prefix {}".format(prefix))
@@ -386,17 +387,7 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name)
     # shape of data frame print
     print("Shape of dataframe {}".format(df.shape))
     
-    if balance_dataset:
-        # Balance the dataset down to the minority class
-        df_grouped_by = df.groupby(["cat_view_count"]) 
-        df_balanced = df_grouped_by.apply(lambda x: x.sample(df_grouped_by.size().max()).reset_index(drop=True))
-
-        df_balanced = df_balanced.reset_index(drop=True)
-        print("Shape of balanced dataframe {}".format(df_balanced.shape))
-        
-        print(df_balanced["cat_view_count"].head(5))
-
-        df = df_balanced
+   
 
     # showing the percentage of split for train/test/val
     print("train split percentage {}".format(args.train_split_percentage))
@@ -427,6 +418,19 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name)
     print("Shape of train dataframe {}".format(df_train.shape))
     print("Shape of validation dataframe {}".format(df_validation.shape))
     print("Shape of test dataframe {}".format(df_test.shape))
+    
+    # balancing the training set only to avoid data leakage
+    if balance_dataset:
+        # Balance the dataset down to the minority class
+        df_grouped_by = df_train.groupby(["cat_view_count"]) 
+        df_balanced = df_grouped_by.apply(lambda x: x.sample(df_grouped_by.size().max(), replace = True).reset_index(drop=True))
+
+        df_balanced = df_balanced.reset_index(drop=True)
+        print("Shape of balanced dataframe {}".format(df_balanced.shape))
+        
+        print(df_balanced["cat_view_count"].head(5))
+
+        df_train = df_balanced
 
     # timestamp for the date variable
     timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -525,6 +529,7 @@ def process(args):
         max_seq_length=args.max_seq_length,
         prefix=args.feature_store_offline_prefix,
         feature_group_name=args.feature_group_name,
+        balance_dataset=args.balance_dataset,
     )
 
     input_files = glob.glob("{}/*.csv".format(args.input_data))
