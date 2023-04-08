@@ -345,11 +345,7 @@ def parse_args():
         type=float,
         default=0.05,
     )
-    parser.add_argument(
-        "--test-split-percentage",
-        type=float,
-        default=0.10,
-    )
+
     parser.add_argument(
         "--max-seq-length",
         type=int,
@@ -392,36 +388,25 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name,
     # showing the percentage of split for train/test/val
     print("train split percentage {}".format(args.train_split_percentage))
     print("validation split percentage {}".format(args.validation_split_percentage))
-    print("test split percentage {}".format(args.test_split_percentage))
     
     # assigning the holdout for test/val from subtracting the train % which is 85%
     holdout_percentage = 1.00 - args.train_split_percentage
     print("holdout percentage {}".format(holdout_percentage))
     
     # splitting the df train set
-    df_train, df_holdout = train_test_split(df, test_size=holdout_percentage)
-    
-    # calculating the test holdout before splitting validation
-    test_holdout_percentage = args.test_split_percentage / holdout_percentage
-    
-    print("test holdout percentage {}".format(test_holdout_percentage))
-    
-    # splitting the validation and test set
-    df_validation, df_test = train_test_split(df_holdout, test_size=test_holdout_percentage)
+    df_train, df_validation = train_test_split(df, test_size=holdout_percentage, stratisfy = df['cat_view_count'])
     
     # reseting the index of each new df
     df_train = df_train.reset_index(drop=True)
     df_validation = df_validation.reset_index(drop=True)
-    df_test = df_test.reset_index(drop=True)
     
             # confirm the final shapes of the dataframe are correct 85/10/5
     print("Shape of train dataframe {}".format(df_train.shape))
     print("Shape of validation dataframe {}".format(df_validation.shape))
-    print("Shape of test dataframe {}".format(df_test.shape))
     
     # balancing the training set only to avoid data leakage
     if balance_dataset:
-        # Balance the dataset down to the minority class
+        # Balance the dataset up to the majority class for only the train set
         df_grouped_by = df_train.groupby(["cat_view_count"]) 
         df_balanced = df_grouped_by.apply(lambda x: x.sample(df_grouped_by.size().max(), replace = True).reset_index(drop=True))
 
@@ -450,18 +435,12 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name,
         axis=1,
     )
 
-    test_inputs = df_test.apply(
-        lambda x: Input(
-            cat_view_count=x[LABEL_COLUMN], title=x[TITLE_COLUMN], tags=x[TAGS_COLUMN], description=x[DESCRIPTION_COLUMN], video_id=x[VIDEO_ID_COLUMN], date=timestamp
-        ),
-        axis=1,
-    )
+
 
    # saving the data within the s3 bucket
     train_data = "{}/bert/train".format(args.output_data)
     print(train_data)
     validation_data = "{}/bert/validation".format(args.output_data)
-    test_data = "{}/bert/test".format(args.output_data)
     
     train_records = transform_inputs_to_tfrecord(
         train_inputs,
@@ -475,11 +454,7 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name,
         max_seq_length,
     )
 
-    test_records = transform_inputs_to_tfrecord(
-        test_inputs,
-        "{}/part-{}-{}.tfrecord".format(test_data, args.current_host, filename_without_extension),
-        max_seq_length,
-    )
+
 
     df_train_records = pd.DataFrame.from_dict(train_records)
     df_train_records["split_type"] = "train"
@@ -489,16 +464,13 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name,
     df_validation_records["split_type"] = "validation"
     df_validation_records.head()
 
-    df_test_records = pd.DataFrame.from_dict(test_records)
-    df_test_records["split_type"] = "test"
-    df_test_records.head()
+
 
     
 # Add record to feature store
     print("Ingesting Features...")
     feature_group.ingest(data_frame=df_train_records, max_workers=3, wait=True)
     feature_group.ingest(data_frame=df_validation_records, max_workers=3, wait=True)
-    feature_group.ingest(data_frame=df_test_records, max_workers=3, wait=True)
     
     offline_store_status = None
     while offline_store_status != 'Active':
@@ -522,7 +494,6 @@ def process(args):
 
     train_data = "{}/bert/train".format(args.output_data)
     validation_data = "{}/bert/validation".format(args.output_data)
-    test_data = "{}/bert/test".format(args.output_data)
 
     transform_csv_to_tfrecord = functools.partial(
         _transform_csv_to_tfrecord,
@@ -555,10 +526,6 @@ def process(args):
     for file in dirs_output:
         print(file)
 
-    print("Listing contents of {}".format(test_data))
-    dirs_output = os.listdir(test_data)
-    for file in dirs_output:
-        print(file)
 
     offline_store_contents = None
     while offline_store_contents is None:
