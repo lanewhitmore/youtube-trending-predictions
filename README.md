@@ -1,7 +1,9 @@
 # youtube-trending-predictions
 
 ## Installation
-
+To follow the steps used in this project, begin by cloning this repository in a third-party application or by executing the following:
+git init
+git clone https://github.com/lanewhitmore/youtube-trending-predictions.git
 
 ## Contributors
 Authors: Caleb McCurdy, Joel Day, Lane Whitmore
@@ -13,6 +15,9 @@ Company Industry: Social Media Content & Brand Building
 ## Methods
 
 ## Technologies
+Excel
+Google Docs
+AWS Services (Athena, Sagemaker, S3)
 
 ## Abstract
 ViewBoost aims to help high performing YouTube clients increase their view counts and revenue by providing data-driven recommendations for optimizing their videos. These recommendations leverage both Machine learning and trending YouTube information from various regions of the world. 
@@ -28,7 +33,9 @@ For ViewBoost, this problem is worth addressing because of the potential benefit
 2. Predict how a creator’s video will perform on the platform by either predicting likes or views.
 
 3. Help clients make more informed decisions about what types of videos to create.  - Offer insight into other potential profitable avenues, or insight into how profitable a new YouTube sector can be. 
+
 4. Offer long-term growth potential by finding rising topics as well as determining risk levels for different YouTube video features - some features may be more profitable but riskier. 
+
 5. Help clients cultivate a better understanding of their listeners, as well as listeners of similar artists, to increase viewer retention rates and an overall deeper understanding of their viewer base. 
 
 
