@@ -2,7 +2,9 @@
 
 ## Installation
 To follow the steps used in this project, begin by cloning this repository in a third-party application or by executing the following:
+
 git init
+
 git clone https://github.com/lanewhitmore/youtube-trending-predictions.git
 
 ## Contributors
