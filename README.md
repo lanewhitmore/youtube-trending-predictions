@@ -18,7 +18,9 @@ Company Industry: Social Media Content & Brand Building
 
 ## Technologies
 Excel
+
 Google Docs
+
 AWS Services (Athena, Sagemaker, S3)
 
 ## Abstract
