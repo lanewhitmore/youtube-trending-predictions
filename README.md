@@ -5,7 +5,7 @@ To follow the steps used in this project, begin by cloning this repository in a 
 
 git init
 
-git clone https://github.com/lanewhitmore/youtube-trending-predictions.git
+git clone [https://github.com/lanewhitmore/youtube-trending-predictions.git]()
 
 ## Contributors
 Authors: Caleb McCurdy, Joel Day, Lane Whitmore
