@@ -394,7 +394,7 @@ def _transform_csv_to_tfrecord(file, max_seq_length, prefix, feature_group_name,
     print("holdout percentage {}".format(holdout_percentage))
     
     # splitting the df train set
-    df_train, df_validation = train_test_split(df, test_size=holdout_percentage, stratisfy = df['cat_view_count'])
+    df_train, df_validation = train_test_split(df, test_size=holdout_percentage, stratify = df['cat_view_count'])
     
     # reseting the index of each new df
     df_train = df_train.reset_index(drop=True)

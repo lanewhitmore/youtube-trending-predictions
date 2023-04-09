@@ -149,7 +149,9 @@ if __name__ == "__main__":
     parser.add_argument("--run_sample_predictions", type=eval, default=False)
     parser.add_argument("--enable_tensorboard", type=eval, default=False)
     parser.add_argument("--enable_checkpointing", type=eval, default=False)
-    parser.add_argument("--output_data_dir", type=str, default=os.environ["SM_OUTPUT_DATA_DIR"])  # This is unused
+    parser.add_argument("--local_bucket", type=str, default = None)
+    parser.add_argument("--output_data_dir", type=str, default=os.environ["SM_OUTPUT_DATA_DIR"]) 
+    
 
 
 
@@ -217,6 +219,8 @@ if __name__ == "__main__":
     print("enable_tensorboard {}".format(enable_tensorboard))
     enable_checkpointing = args.enable_checkpointing
     print("enable_checkpointing {}".format(enable_checkpointing))
+    local_bucket = args.local_bucket
+    print("Local bucket {}".format(local_bucket))
 
     checkpoint_base_path = args.checkpoint_base_path
     print("checkpoint_base_path {}".format(checkpoint_base_path))
@@ -451,7 +455,7 @@ if __name__ == "__main__":
             predict("""Mario Maker Speed Runs"""),
         )
 
-        df_test_reviews = pd.read_csv("s3://sagemaker-us-east-1-492991381452/youtubeStatistics/cat_dfs/test/gaming_test.csv")[["title", "cat_view_count"]]
+        df_test_reviews = pd.read_csv("s3://{}/youtubeStatistics/cat_dfs/test/gaming_test.csv".format(local_bucket))[["title", "cat_view_count"]]
 
         df_test_reviews = df_test_reviews.sample(n=100)
         df_test_reviews.shape
@@ -514,7 +518,7 @@ if __name__ == "__main__":
 
         metrics_path = os.path.join(local_model_dir, "metrics/")
         os.makedirs(metrics_path, exist_ok=True)
-        plt.savefig("{}/confusion_matrix.png".format(metrics_path))
+        plt.savefig("{}/youtubeStatistics/confusion_matrix.png".format(local_bucket))
 
         report_dict = {
             "metrics": {
