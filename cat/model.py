@@ -9,15 +9,25 @@ import subprocess
 import sys
 import os
 import csv
-
-import tensorflow as tf
-import pandas as pd
-import numpy as np
-
 subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers==3.5.1"])
 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-learn==0.23.1"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib==3.2.1"])
+
+import tensorflow as tf
+import pandas as pd
+import numpy as np
+import s3fs
+import io
+
+import itertools
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+
+
 
 from transformers import DistilBertTokenizer
 from transformers import DistilBertConfig
@@ -38,17 +48,7 @@ def select_data_and_label_from_record(record):
     return (x, y)
 
 
-def file_based_input_dataset_builder(
-    channel,
-    input_filenames,
-    pipe_mode,
-    is_training,
-    drop_remainder,
-    batch_size,
-    epochs,
-    steps_per_epoch,
-    max_seq_length,
-):
+def file_based_input_dataset_builder(channel,input_filenames,pipe_mode, is_training, drop_remainder, batch_size, epochs,steps_per_epoch,max_seq_length):
 
 
 
@@ -84,7 +84,7 @@ def file_based_input_dataset_builder(
         )
     )
 
-    #    dataset.cache()
+
 
     dataset = dataset.shuffle(buffer_size=1000, reshuffle_each_iteration=True)
 
@@ -296,7 +296,7 @@ if __name__ == "__main__":
                 X = tf.keras.layers.GlobalMaxPool1D()(X)
                 X = tf.keras.layers.Dense(50, activation="relu")(X)
                 X = tf.keras.layers.Dropout(0.2)(X)
-                X = tf.keras.layers.Dense(len(CLASSES), activation="softmax")(X)
+                X = tf.keras.layers.Dense(len(CLASSES), activation="sigmoid")(X)
 
                 model = tf.keras.Model(inputs=[input_ids, input_mask], outputs=X)
 
@@ -364,7 +364,6 @@ if __name__ == "__main__":
 
         model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
         print("Compiled model {}".format(model))
-        #        model.layers[0].trainable = not freeze_bert_layer
         print(model.summary())
 
         if run_validation:
@@ -395,7 +394,7 @@ if __name__ == "__main__":
                 callbacks=callbacks,
             )
             print(train_and_validation_history)
-        else:  # Not running validation
+        else: 
             print("Starting Training (Without Validation)...")
             train_history = model.fit(
                 train_dataset,
@@ -416,14 +415,6 @@ if __name__ == "__main__":
         print("tensorflow_saved_model_path {}".format(tensorflow_saved_model_path))
         model.save(tensorflow_saved_model_path, include_optimizer=False, overwrite=True, save_format="tf")
 
-       
-        inference_path = os.path.join(local_model_dir, "code/")
-        print("Copying inference source files to {}".format(inference_path))
-        os.makedirs(inference_path, exist_ok=True)
-        os.system("cp inference.py {}".format(inference_path))
-        print(glob(inference_path))
-       
-        os.system("cp -R ./test/ {}".format(local_model_dir))
 
     if run_sample_predictions:
 
@@ -456,8 +447,6 @@ if __name__ == "__main__":
         )
 
         df_test_reviews = pd.read_csv("s3://{}/youtubeStatistics/cat_dfs/test/gaming_test.csv".format(local_bucket))[["title", "cat_view_count"]]
-
-        df_test_reviews = df_test_reviews.sample(n=100)
         df_test_reviews.shape
         df_test_reviews.head()
 
@@ -466,18 +455,14 @@ if __name__ == "__main__":
 
         y_actual = df_test_reviews["cat_view_count"]
         y_actual
+        
 
-        from sklearn.metrics import classification_report
 
         print(classification_report(y_true=y_test, y_pred=y_actual))
-
-        from sklearn.metrics import accuracy_score
 
         accuracy = accuracy_score(y_true=y_test, y_pred=y_actual)
         print("Test accuracy: ", accuracy)
 
-        import matplotlib.pyplot as plt
-        import pandas as pd
 
         def plot_conf_mat(cm, classes, title, cmap=plt.cm.Greens):
             print(cm)
@@ -503,11 +488,6 @@ if __name__ == "__main__":
                 plt.ylabel("True label")
                 plt.xlabel("Predicted label")
 
-        import itertools
-        import numpy as np
-        from sklearn.metrics import confusion_matrix
-        import matplotlib.pyplot as plt
-
         cm = confusion_matrix(y_true=y_test, y_pred=y_actual)
 
         plt.figure()
@@ -515,10 +495,18 @@ if __name__ == "__main__":
         plot_conf_mat(cm, classes=["0","1"], title="Confusion Matrix")
 
         plt.show()
+        img_data = io.BytesIO()
+        plt.savefig(img_data, format='png', bbox_inches='tight')
+        img_data.seek(0)
+        image_name = "confusion_matrix.png"
+        
+        s3 = s3fs.S3FileSystem(anon=False)  # Uses default credentials
+        with s3.open('s3://{}/youtubeStatistics/'.format(local_bucket)+image_name, 'wb') as f:
+            f.write(img_data.getbuffer())
+
 
         metrics_path = os.path.join(local_model_dir, "metrics/")
         os.makedirs(metrics_path, exist_ok=True)
-        plt.savefig("{}/youtubeStatistics/confusion_matrix.png".format(local_bucket))
 
         report_dict = {
             "metrics": {
