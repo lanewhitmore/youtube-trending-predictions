@@ -296,7 +296,7 @@ if __name__ == "__main__":
                 X = tf.keras.layers.GlobalMaxPool1D()(X)
                 X = tf.keras.layers.Dense(50, activation="relu")(X)
                 X = tf.keras.layers.Dropout(0.2)(X)
-                X = tf.keras.layers.Dense(len(CLASSES), activation="sigmoid")(X)
+                X = tf.keras.layers.Dense(1, activation="sigmoid")(X)
 
                 model = tf.keras.Model(inputs=[input_ids, input_mask], outputs=X)
 
@@ -359,8 +359,8 @@ if __name__ == "__main__":
 
         print("*** OPTIMIZER {} ***".format(optimizer))
 
-        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        metric = tf.keras.metrics.SparseCategoricalAccuracy("accuracy")
+        loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        metric = tf.keras.metrics.BinaryAccuracy("accuracy")
 
         model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
         print("Compiled model {}".format(model))
@@ -420,8 +420,7 @@ if __name__ == "__main__":
 
         def predict(title):
             encode_plus_tokens = tokenizer.encode_plus(
-                title, pad_to_max_length=True, max_length=max_seq_length, truncation=True, return_tensors="tf"
-            )
+                title, pad_to_max_length=True, max_length=max_seq_length, truncation=True, return_tensors="tf")
             
             title_input_ids = encode_plus_tokens["input_ids"]
 
@@ -433,6 +432,16 @@ if __name__ == "__main__":
             prediction = [{"label": config.id2label[item.argmax()], "score": item.max().item()} for item in outputs]
 
             return prediction[0]["label"]
+        
+        def predict_proba(title):
+            encode_plus_tokens = tokenizer.encode_plus(title, pad_to_max_length=True, max_length=max_seq_length, truncation=True, return_tensors="tf")
+            title_input_ids = encode_plus_tokens["input_ids"]
+            title_input_mask = encode_plus_tokens["attention_mask"]
+            
+            preds = model.predict(x=(title_input_ids, title_input_mask)).logits
+            res = tf.nn.sigmoid(preds, axis=1).numpy()      
+    
+            return res
 
         print(
             """Valorant VCT Replay""",
@@ -445,7 +454,7 @@ if __name__ == "__main__":
             """Mario Maker Speed Runs""",
             predict("""Mario Maker Speed Runs"""),
         )
-
+        forres_df = pd.read_csv("s3://{}/youtubeStatistics/cat_dfs/test/gaming_test.csv".format(local_bucket))[["title", "video_id", "view_count"]]
         df_test_reviews = pd.read_csv("s3://{}/youtubeStatistics/cat_dfs/test/gaming_test.csv".format(local_bucket))[["title", "cat_view_count"]]
         df_test_reviews.shape
         df_test_reviews.head()
@@ -456,7 +465,13 @@ if __name__ == "__main__":
         y_actual = df_test_reviews["cat_view_count"]
         y_actual
         
-
+        #y_prob = pd.DataFrame(df_test_reviews["title"].map(predict_proba), columns = "test_probability")
+        
+       # print(y_prob.head())
+    
+        results_df = pd.DataFrame({"Prediction": y_test, "Actual": y_actual, "title": forres_df["title"], "video_id": forres_df["video_id"], "view_count": forres_df["view_count"]})
+        
+        
 
         print(classification_report(y_true=y_test, y_pred=y_actual))
 
@@ -503,6 +518,7 @@ if __name__ == "__main__":
         s3 = s3fs.S3FileSystem(anon=False)  # Uses default credentials
         with s3.open('s3://{}/youtubeStatistics/'.format(local_bucket)+image_name, 'wb') as f:
             f.write(img_data.getbuffer())
+        results_df.to_csv("s3://{}/youtubeStatistics/results_df.csv".format(local_bucket))
 
 
         metrics_path = os.path.join(local_model_dir, "metrics/")
