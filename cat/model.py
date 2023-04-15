@@ -291,12 +291,12 @@ if __name__ == "__main__":
 
                 embedding_layer = transformer_model.distilbert(input_ids, attention_mask=input_mask)[0]
                 X = tf.keras.layers.Bidirectional(
-                    tf.keras.layers.LSTM(50, return_sequences=True, dropout=0.1, recurrent_dropout=0.1)
+                    tf.keras.layers.LSTM(124, return_sequences=True, dropout=0.1, recurrent_dropout=0.1)
                 )(embedding_layer)
                 X = tf.keras.layers.GlobalMaxPool1D()(X)
-                X = tf.keras.layers.Dense(50, activation="relu")(X)
+                X = tf.keras.layers.Dense(64, activation="relu")(X)
                 X = tf.keras.layers.Dropout(0.2)(X)
-                X = tf.keras.layers.Dense(1, activation="sigmoid")(X)
+                X = tf.keras.layers.Dense(2, activation="softmax")(X)
 
                 model = tf.keras.Model(inputs=[input_ids, input_mask], outputs=X)
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
         print("*** OPTIMIZER {} ***".format(optimizer))
 
-        loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         metric = tf.keras.metrics.BinaryAccuracy("accuracy")
 
         model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
@@ -432,16 +432,6 @@ if __name__ == "__main__":
             prediction = [{"label": config.id2label[item.argmax()], "score": item.max().item()} for item in outputs]
 
             return prediction[0]["label"]
-        
-        def predict_proba(title):
-            encode_plus_tokens = tokenizer.encode_plus(title, pad_to_max_length=True, max_length=max_seq_length, truncation=True, return_tensors="tf")
-            title_input_ids = encode_plus_tokens["input_ids"]
-            title_input_mask = encode_plus_tokens["attention_mask"]
-            
-            preds = model.predict(x=(title_input_ids, title_input_mask)).logits
-            res = tf.nn.sigmoid(preds, axis=1).numpy()      
-    
-            return res
 
         print(
             """Valorant VCT Replay""",
@@ -464,10 +454,8 @@ if __name__ == "__main__":
 
         y_actual = df_test_reviews["cat_view_count"]
         y_actual
+                                  
         
-        #y_prob = pd.DataFrame(df_test_reviews["title"].map(predict_proba), columns = "test_probability")
-        
-       # print(y_prob.head())
     
         results_df = pd.DataFrame({"Prediction": y_test, "Actual": y_actual, "title": forres_df["title"], "video_id": forres_df["video_id"], "view_count": forres_df["view_count"]})
         
