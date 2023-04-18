@@ -30,7 +30,7 @@ Google Docs
 
 Google Slides
 
-PowerPoint
+Microsoft PowerPoint
 
 AWS Services (Athena, Sagemaker, S3)
 
