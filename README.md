@@ -80,5 +80,5 @@ The Risks of AutoML and How to Avoid Them. (2019, October 24). Harvard Business 
 https://hbr.org/2019/10/the-risks-of-automl-and-how-to-avoid-them
 
 ## Project and Presentation
-[Final Project Report.pdf](https://github.com/lanewhitmore/youtube-trending-predictions/files/11258231/Final.Project.Report.pdf)
-[Executive Summary and Recommendations.pdf](https://github.com/lanewhitmore/youtube-trending-predictions/files/11258243/Executive.Summary.and.Recommendations.pdf)
+[Project Report](https://github.com/lanewhitmore/youtube-trending-predictions/files/11258231/Final.Project.Report.pdf)
+[Executive Summary and Recommendations](https://github.com/lanewhitmore/youtube-trending-predictions/files/11258243/Executive.Summary.and.Recommendations.pdf)
