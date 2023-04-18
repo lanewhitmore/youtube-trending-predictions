@@ -15,11 +15,22 @@ Company Name: ViewBoost
 Company Industry: Social Media Content & Brand Building
 
 ## Methods
+Data Exploration
+
+Data Pre-Processing
+
+Data Visualization
+
+Data Modeling (training, testing, validation, metrics)
 
 ## Technologies
-Excel
+Microsoft Excel
 
 Google Docs
+
+Google Slides
+
+PowerPoint
 
 AWS Services (Athena, Sagemaker, S3)
 
